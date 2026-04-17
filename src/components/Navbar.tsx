@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useSession } from "./providers/SessionProvider"
+import { getSupabaseClient } from "@/lib/supabase"
 
 export function Navbar() {
   const { user, loading } = useSession()
@@ -13,7 +14,11 @@ export function Navbar() {
       await fetch("/api/auth/signout", {
         method: "POST",
       })
-      router.refresh()
+
+      const supabase = getSupabaseClient()
+      await supabase.auth.signOut()
+
+      router.push("/")
     } catch (error) {
       console.error("Sign out error:", error)
     }
