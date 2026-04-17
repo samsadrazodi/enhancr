@@ -1,11 +1,11 @@
 # Build State
-Last updated: 2026-04-16
-Last session summary: Phase 4 ENHANCE & UPSCALE COMPLETE. Gemini API integration with gemini-1.5-flash for image analysis. Sharp-based enhancement pipeline (upscale 2x, sharpen, denoise, normalize). Rate limiting (3/day free). SessionProvider now exposes session.access_token for auth-gated API routes. Edit API route at /api/edit. UI button in editor shows Enhance & Upscale. Tests skipped (path alias issue). Ready for Phase 5 (remaining tools).
+Last updated: 2026-04-17
+Last session summary: Phase 5A STANDARD TOOLS COMPLETE. 7 AI tools with Gemini generative API (gemini-2.0-flash-exp): Fix Eyes, Retouch Skin, Remove Object (with MaskBrush UI), Relight (text prompt), Background Blur (Sharp only), Background Replace/Remove (text prompt). Extended /api/edit route to dispatch per tool with optional mask/prompt fields. Editor UI shows all tool buttons + modals. Ready for Phase 5B (Faithful Restoration differentiator).
 
 ## Current phase
-Phase: 4 — First Gemini tool: Enhance & Upscale
+Phase: 5A — Standard tools: Fix Eyes, Retouch, Remove Object, Relight, Background
 Status: complete
-Sub-step: Ready for Phase 5 (Fix Eyes, Retouch Skin, Remove Object)
+Sub-step: Ready for Phase 5B (Faithful Restoration, Fidelity Mode, diff overlay, compare view, Restoration Receipt)
 
 ## Owner preferences
 - npm only (no pnpm, no yarn, no bun)

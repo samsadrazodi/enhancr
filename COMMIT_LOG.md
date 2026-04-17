@@ -110,3 +110,52 @@ feat(phase-4): Gemini-powered image enhancement with Sharp processing
 - Error states handled (rate limit, API failure, validation)
 - Ready for: Phase 5 (Fix Eyes, Retouch Skin, Remove Object tools)
 
+## Phase 5A — Standard Tools: Fix Eyes, Retouch Skin, Remove Object, Relight, Background
+
+feat(phase-5a): standard tools — fix eyes, retouch skin, remove object, relight, background
+- Extended /lib/gemini.ts: add callGeminiGenerative() using gemini-2.0-flash-exp with responseModalities: ["IMAGE"]
+  * 3 retries, 30s timeout, exponential backoff (same as analyzeImage)
+  * Accepts optional maskBuffer for Remove Object use case
+  * Graceful error if model unavailable: returns "This tool requires the Gemini image generation API"
+- Add tool functions to /lib/gemini.ts:
+  * fixEyes(buffer) — Fix Eyes (red-eye, glare, iris sharpness)
+  * retouchSkin(buffer) — Retouch Skin (blemishes only, no whitening)
+  * removeObject(buffer, mask) — Remove Object (mask-based)
+  * relight(buffer, prompt) — Relight (user-provided lighting description)
+  * blurBackground(buffer) — Background Blur (Sharp-only, Gaussian blur sigma=15)
+  * replaceBackground(buffer, prompt) — Background Replace (user-provided description)
+  * removeBackground(buffer) — Background Remove (transparent PNG)
+- Add 7 tool prompts to /lib/prompts.ts with identity-preservation constraints:
+  * FIX_EYES_PROMPT_V1, RETOUCH_SKIN_PROMPT_V1, REMOVE_OBJECT_PROMPT_V1, RELIGHT_PROMPT_V1, BACKGROUND_REPLACE_PROMPT_V1, BACKGROUND_REMOVE_PROMPT_V1
+- Create /src/components/editor/MaskBrush.tsx:
+  * Canvas overlay component for user to paint masks
+  * Semi-transparent red brush strokes while painting
+  * Brush size slider
+  * Clear, Done (→ convert to B&W mask), Cancel buttons
+  * Returns mask as Blob to parent
+- Extend /api/edit/route.ts:
+  * Accept 'tool' field from FormData (default: "enhance" for backwards compat)
+  * Dispatch to correct tool function based on tool name
+  * Handle optional 'mask' file for removeObject
+  * Handle optional 'prompt' string for relight/replaceBackground
+  * All error handling: 400 (validation), 429 (rate limit), 502 (Gemini API failure)
+- Update /app/app/editor/page.tsx:
+  * Rename enhancing → processing, enhanceError → processError
+  * Replace handleEnhance with generic processTool(tool, additionalData) function
+  * Show 7 real tool buttons (all enabled when image is loaded)
+  * Modal 1: MaskBrush for Remove Object
+  * Modal 2: Text input for Relight (e.g., "golden hour")
+  * Modal 3: Text input for Background Replace (e.g., "beach sunset")
+  * Background tools grouped under "Background" header
+  * Error display below tools panel
+
+npm run lint ✓, npm run build ✓
+
+**Phase 5A Status: COMPLETE** ✓
+- All 7 standard tools implemented and integrated
+- MaskBrush UI component working
+- Tool dispatch in API route working
+- Error handling graceful (502 if gemini-2.0-flash-exp unavailable)
+- Background Blur always works (Sharp-only, no Gemini)
+- Ready for: Phase 5B (Faithful Restoration differentiator)
+
