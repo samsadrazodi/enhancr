@@ -66,5 +66,47 @@ d44adac — fix(auth): session persistence for login and signup
 - Protected routes redirect when unauthenticated
 - Navbar/Footer respond to auth state changes
 
-## Phase 3 — Core Editor Shell (IN PROGRESS)
+## Phase 3 — Core Editor Shell
+
+d55fff0 — feat(phase-3): core editor shell with upload, crop, and download
+- Upload component: drag-drop + file picker with validation
+- Sharp server route: POST /api/image/process for image processing
+- Canvas Editor: display, crop selection, rotation slider
+- Crop/Straighten: local-only tool (drag, apply, rotate)
+- Download: exports canvas to PNG
+- Editor layout: two-column (canvas + info panel)
+- Image metadata display (width, height, format)
+
+**Phase 3 Status: CORE COMPLETE** ✓
+- Upload works (drag-drop + file picker)
+- Sharp processing working
+- Canvas display and editing
+- Crop/rotate/download working locally
+- Ready for: Supabase Storage RLS + Phase 4 (Gemini tools)
+
+## Phase 4 — First Gemini Tool: Enhance & Upscale
+
+feat(phase-4): Gemini-powered image enhancement with Sharp processing
+- `@google/generative-ai` SDK installed (Google Gemini API client)
+- `/lib/gemini.ts`: lazy singleton client with analyzeImage() and enhanceImage()
+  - Uses gemini-1.5-flash for image analysis (noiseLevel, sharpnessNeeded, exposureIssue, colorCast)
+  - Sharp pipeline: 2x bicubic upscale, adaptive sharpen, median denoise, normalize, exposure/color correction
+  - 3 retries with exponential backoff, 30s timeout per request
+- `/lib/prompts.ts`: ENHANCE_PROMPT_V1 with JSON-format response template
+- `/lib/content-filter.ts`: preflightCheck() validates file size (max 10MB) and type (JPEG/PNG/WebP)
+- `/lib/rate-limit.ts`: in-memory rate limiter with per-user daily limits (free tier: 3/day, pro/studio: unlimited)
+- `/api/edit/route.ts`: POST handler, auth-gated via Bearer token, rate-limited, returns base64 enhanced image
+- Updated `SessionProvider`: now exposes `session: Session | null` for access token
+- Updated `CanvasEditor`: exposed via forwardRef so parent can call canvas.toBlob()
+- Updated `editor/page.tsx`: real "Enhance & Upscale" button with loading state, error handling (429 rate limit, 502 API failures)
+- `/migrations/001_edits.sql`: edits table schema + RLS policies (user runs manually in Supabase)
+- npm run lint ✓, npm run build ✓, npm run dev ✓ (Ready in ~1s)
+
+**Phase 4 Status: COMPLETE** ✓
+- Gemini API integration working (with placeholder fallback if GEMINI_API_KEY missing)
+- Rate limiting enforced
+- Content filtering checks file size and format
+- Editor UI integrated with real Enhance button
+- Error states handled (rate limit, API failure, validation)
+- Ready for: Phase 5 (Fix Eyes, Retouch Skin, Remove Object tools)
 

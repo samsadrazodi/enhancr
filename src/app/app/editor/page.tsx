@@ -2,7 +2,7 @@
 
 import { useSession } from "@/components/providers/SessionProvider"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Upload } from "@/components/Upload"
 import { CanvasEditor } from "@/components/CanvasEditor"
 
@@ -13,10 +13,13 @@ interface ImageMetadata {
 }
 
 export default function EditorPage() {
-  const { user, loading } = useSession()
+  const { user, loading, session } = useSession()
   const router = useRouter()
   const [image, setImage] = useState<string | null>(null)
   const [metadata, setMetadata] = useState<ImageMetadata | null>(null)
+  const [enhancing, setEnhancing] = useState(false)
+  const [enhanceError, setEnhanceError] = useState("")
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -40,6 +43,53 @@ export default function EditorPage() {
       link.click()
       URL.revokeObjectURL(url)
     }, "image/png")
+  }
+
+  const handleEnhance = async () => {
+    if (!canvasRef.current || !session?.access_token) return
+
+    setEnhancing(true)
+    setEnhanceError("")
+
+    try {
+      canvasRef.current.toBlob(async (blob) => {
+        if (!blob) {
+          setEnhanceError("Failed to capture image")
+          setEnhancing(false)
+          return
+        }
+
+        const formData = new FormData()
+        formData.append("file", blob, "image.png")
+
+        const response = await fetch("/api/edit", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          if (response.status === 429) {
+            setEnhanceError(`Rate limit reached. Resets at ${new Date(data.resetAt).toLocaleTimeString()}`)
+          } else {
+            setEnhanceError(data.error || "Enhancement failed")
+          }
+          setEnhancing(false)
+          return
+        }
+
+        const result = await response.json()
+        setImage(result.image)
+        setMetadata(result.metadata)
+        setEnhancing(false)
+      }, "image/png")
+    } catch (err) {
+      setEnhanceError(err instanceof Error ? err.message : "Enhancement failed")
+      setEnhancing(false)
+    }
   }
 
   if (loading) {
@@ -67,7 +117,7 @@ export default function EditorPage() {
             {!image ? (
               <Upload onUploadComplete={handleUploadComplete} />
             ) : (
-              <CanvasEditor imageBase64={image} onDownload={handleDownload} />
+              <CanvasEditor ref={canvasRef} imageBase64={image} onDownload={handleDownload} />
             )}
 
             {image && (
@@ -87,14 +137,28 @@ export default function EditorPage() {
           <div className="space-y-6">
             <div className="bg-white p-6 rounded border border-stone-200">
               <h2 className="text-lg font-semibold mb-4">Tools</h2>
-              <div className="space-y-2 text-sm text-stone-600">
-                <p>✓ Crop / Straighten (local)</p>
-                <p>○ Enhance & Upscale (Phase 4)</p>
-                <p>○ Fix Eyes (Phase 5)</p>
-                <p>○ Retouch Skin (Phase 5)</p>
-                <p>○ Remove Object (Phase 5)</p>
+              <div className="space-y-2">
+                <p className="text-sm text-stone-600">✓ Crop / Straighten (local)</p>
+                {image && (
+                  <button
+                    onClick={handleEnhance}
+                    disabled={enhancing}
+                    className="w-full py-2 px-4 bg-gold-600 text-charcoal-900 font-medium rounded hover:bg-gold-700 disabled:opacity-50 transition"
+                  >
+                    {enhancing ? "Enhancing..." : "✓ Enhance & Upscale"}
+                  </button>
+                )}
+                <p className="text-sm text-stone-600">○ Fix Eyes (Phase 5)</p>
+                <p className="text-sm text-stone-600">○ Retouch Skin (Phase 5)</p>
+                <p className="text-sm text-stone-600">○ Remove Object (Phase 5)</p>
               </div>
             </div>
+
+            {enhanceError && (
+              <div className="bg-red-50 border border-red-200 p-4 rounded">
+                <p className="text-red-700 text-sm">{enhanceError}</p>
+              </div>
+            )}
 
             {image && metadata && (
               <div className="bg-white p-6 rounded border border-stone-200">

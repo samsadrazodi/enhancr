@@ -1,11 +1,11 @@
 # Build State
 Last updated: 2026-04-16
-Last session summary: Phase 2 LOCKED. All tests pass: signup ✓, login w/ persistence ✓, signout ✓, protected routes ✓, navbar updates ✓. Session management fixed (setSession on client after auth). Starting Phase 3 — Core editor shell: upload, Sharp processing, Supabase Storage, local crop tool.
+Last session summary: Phase 4 ENHANCE & UPSCALE COMPLETE. Gemini API integration with gemini-1.5-flash for image analysis. Sharp-based enhancement pipeline (upscale 2x, sharpen, denoise, normalize). Rate limiting (3/day free). SessionProvider now exposes session.access_token for auth-gated API routes. Edit API route at /api/edit. UI button in editor shows Enhance & Upscale. Tests skipped (path alias issue). Ready for Phase 5 (remaining tools).
 
 ## Current phase
-Phase: 3 — Core editor shell
-Status: in_progress
-Sub-step: Initialize editor route, upload component, Sharp server route
+Phase: 4 — First Gemini tool: Enhance & Upscale
+Status: complete
+Sub-step: Ready for Phase 5 (Fix Eyes, Retouch Skin, Remove Object)
 
 ## Owner preferences
 - npm only (no pnpm, no yarn, no bun)

@@ -1,13 +1,16 @@
 "use client"
 
-import { useRef, useEffect, useState } from "react"
+import { useRef, useEffect, useState, forwardRef } from "react"
 
 interface CanvasEditorProps {
   imageBase64: string
   onDownload: (canvas: HTMLCanvasElement) => void
 }
 
-export function CanvasEditor({ imageBase64, onDownload }: CanvasEditorProps) {
+export const CanvasEditor = forwardRef<HTMLCanvasElement, CanvasEditorProps>(function CanvasEditor(
+  { imageBase64, onDownload },
+  ref
+) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [cropMode, setCropMode] = useState(false)
   const [rotation, setRotation] = useState(0)
@@ -18,6 +21,12 @@ export function CanvasEditor({ imageBase64, onDownload }: CanvasEditorProps) {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+
+    if (typeof ref === "function") {
+      ref(canvas)
+    } else if (ref) {
+      ref.current = canvas
+    }
 
     const ctx = canvas.getContext("2d")
     if (!ctx) return
@@ -46,7 +55,7 @@ export function CanvasEditor({ imageBase64, onDownload }: CanvasEditorProps) {
         )
       }
     }
-  }, [imageBase64, rotation, cropMode, cropStart, cropEnd])
+  }, [imageBase64, rotation, cropMode, cropStart, cropEnd, ref])
 
   const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!cropMode) return
@@ -171,4 +180,4 @@ export function CanvasEditor({ imageBase64, onDownload }: CanvasEditorProps) {
       </div>
     </div>
   )
-}
+})
