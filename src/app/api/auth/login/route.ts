@@ -22,7 +22,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json({ user: data.user }, { status: 200 })
+    return NextResponse.json(
+      { user: data.user, session: data.session },
+      { status: 200 }
+    )
   } catch (error) {
     console.error("Login error:", error)
     return NextResponse.json(

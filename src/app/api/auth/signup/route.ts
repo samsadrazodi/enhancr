@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { user: data.user, message: "Signup successful" },
+      { user: data.user, session: data.session, message: "Signup successful" },
       { status: 201 }
     )
   } catch (error) {

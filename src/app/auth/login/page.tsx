@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { getSupabaseClient } from "@/lib/supabase"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -32,6 +33,13 @@ export default function LoginPage() {
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error || "Login failed")
+      }
+
+      const { session } = await response.json()
+
+      if (session) {
+        const supabase = getSupabaseClient()
+        await supabase.auth.setSession(session)
       }
 
       router.push("/app/account")
