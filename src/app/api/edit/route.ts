@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseClient } from "@/lib/supabase"
-import { enhanceImage } from "@/lib/gemini"
+import {
+  enhanceImage,
+  fixEyes,
+  retouchSkin,
+  removeObject,
+  relight,
+  blurBackground,
+  replaceBackground,
+  removeBackground,
+} from "@/lib/gemini"
 import { preflightCheck } from "@/lib/content-filter"
 import { checkRateLimit, recordUsage } from "@/lib/rate-limit"
 import sharp from "sharp"
@@ -53,15 +62,63 @@ export async function POST(request: NextRequest) {
     // Convert file to buffer
     const imageBuffer = Buffer.from(await file.arrayBuffer())
 
-    // Enhance image
+    // Get tool name from FormData (default: "enhance")
+    const tool = (formData.get("tool") as string) || "enhance"
+
+    // Process image based on tool
     let enhancedBuffer: Buffer
     try {
-      enhancedBuffer = await enhanceImage(imageBuffer)
+      switch (tool) {
+        case "enhance":
+          enhancedBuffer = await enhanceImage(imageBuffer)
+          break
+        case "fixEyes":
+          enhancedBuffer = await fixEyes(imageBuffer)
+          break
+        case "retouchSkin":
+          enhancedBuffer = await retouchSkin(imageBuffer)
+          break
+        case "removeObject": {
+          const maskFile = formData.get("mask") as File
+          if (!maskFile) {
+            return NextResponse.json({ error: "Mask required for removeObject" }, { status: 400 })
+          }
+          const maskBuffer = Buffer.from(await maskFile.arrayBuffer())
+          enhancedBuffer = await removeObject(imageBuffer, maskBuffer)
+          break
+        }
+        case "relight": {
+          const lightingPrompt = formData.get("prompt") as string
+          if (!lightingPrompt) {
+            return NextResponse.json({ error: "Lighting prompt required for relight" }, { status: 400 })
+          }
+          enhancedBuffer = await relight(imageBuffer, lightingPrompt)
+          break
+        }
+        case "blurBackground":
+          enhancedBuffer = await blurBackground(imageBuffer)
+          break
+        case "replaceBackground": {
+          const bgPrompt = formData.get("prompt") as string
+          if (!bgPrompt) {
+            return NextResponse.json({ error: "Background prompt required for replaceBackground" }, { status: 400 })
+          }
+          enhancedBuffer = await replaceBackground(imageBuffer, bgPrompt)
+          break
+        }
+        case "removeBackground":
+          enhancedBuffer = await removeBackground(imageBuffer)
+          break
+        default:
+          return NextResponse.json({ error: `Unknown tool: ${tool}` }, { status: 400 })
+      }
     } catch (err) {
-      console.error("Gemini enhancement failed:", err)
+      console.error(`Gemini ${tool} failed:`, err)
+      const msg = err instanceof Error ? err.message : String(err)
+      const statusCode = msg.includes("requires the Gemini image generation API") ? 502 : 502
       return NextResponse.json(
-        { error: "Image enhancement failed. Please try again." },
-        { status: 502 }
+        { error: msg || "Image processing failed. Please try again." },
+        { status: statusCode }
       )
     }
 

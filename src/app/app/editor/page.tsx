@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState, useRef } from "react"
 import { Upload } from "@/components/Upload"
 import { CanvasEditor } from "@/components/CanvasEditor"
+import { MaskBrush } from "@/components/editor/MaskBrush"
 
 interface ImageMetadata {
   width?: number
@@ -17,8 +18,10 @@ export default function EditorPage() {
   const router = useRouter()
   const [image, setImage] = useState<string | null>(null)
   const [metadata, setMetadata] = useState<ImageMetadata | null>(null)
-  const [enhancing, setEnhancing] = useState(false)
-  const [enhanceError, setEnhanceError] = useState("")
+  const [processing, setProcessing] = useState(false)
+  const [processError, setProcessError] = useState("")
+  const [activeModal, setActiveModal] = useState<"maskBrush" | "relight" | "bgReplace" | null>(null)
+  const [promptValue, setPromptValue] = useState("")
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -45,22 +48,30 @@ export default function EditorPage() {
     }, "image/png")
   }
 
-  const handleEnhance = async () => {
+  const processTool = async (tool: string, additionalData?: { mask?: Blob; prompt?: string }) => {
     if (!canvasRef.current || !session?.access_token) return
 
-    setEnhancing(true)
-    setEnhanceError("")
+    setProcessing(true)
+    setProcessError("")
 
     try {
       canvasRef.current.toBlob(async (blob) => {
         if (!blob) {
-          setEnhanceError("Failed to capture image")
-          setEnhancing(false)
+          setProcessError("Failed to capture image")
+          setProcessing(false)
           return
         }
 
         const formData = new FormData()
         formData.append("file", blob, "image.png")
+        formData.append("tool", tool)
+
+        if (additionalData?.mask) {
+          formData.append("mask", additionalData.mask, "mask.png")
+        }
+        if (additionalData?.prompt) {
+          formData.append("prompt", additionalData.prompt)
+        }
 
         const response = await fetch("/api/edit", {
           method: "POST",
@@ -73,22 +84,22 @@ export default function EditorPage() {
         if (!response.ok) {
           const data = await response.json()
           if (response.status === 429) {
-            setEnhanceError(`Rate limit reached. Resets at ${new Date(data.resetAt).toLocaleTimeString()}`)
+            setProcessError(`Rate limit reached. Resets at ${new Date(data.resetAt).toLocaleTimeString()}`)
           } else {
-            setEnhanceError(data.error || "Enhancement failed")
+            setProcessError(data.error || "Processing failed")
           }
-          setEnhancing(false)
+          setProcessing(false)
           return
         }
 
         const result = await response.json()
         setImage(result.image)
         setMetadata(result.metadata)
-        setEnhancing(false)
+        setProcessing(false)
       }, "image/png")
     } catch (err) {
-      setEnhanceError(err instanceof Error ? err.message : "Enhancement failed")
-      setEnhancing(false)
+      setProcessError(err instanceof Error ? err.message : "Processing failed")
+      setProcessing(false)
     }
   }
 
@@ -139,24 +150,89 @@ export default function EditorPage() {
               <h2 className="text-lg font-semibold mb-4">Tools</h2>
               <div className="space-y-2">
                 <p className="text-sm text-stone-600">✓ Crop / Straighten (local)</p>
+
                 {image && (
-                  <button
-                    onClick={handleEnhance}
-                    disabled={enhancing}
-                    className="w-full py-2 px-4 bg-gold-600 text-charcoal-900 font-medium rounded hover:bg-gold-700 disabled:opacity-50 transition"
-                  >
-                    {enhancing ? "Enhancing..." : "✓ Enhance & Upscale"}
-                  </button>
+                  <>
+                    <button
+                      onClick={() => processTool("enhance")}
+                      disabled={processing}
+                      className="w-full py-2 px-4 bg-gold-600 text-charcoal-900 font-medium rounded hover:bg-gold-700 disabled:opacity-50 transition"
+                    >
+                      {processing ? "Processing..." : "✓ Enhance & Upscale"}
+                    </button>
+
+                    <button
+                      onClick={() => processTool("fixEyes")}
+                      disabled={processing}
+                      className="w-full py-2 px-4 bg-stone-200 text-charcoal-900 font-medium rounded hover:bg-stone-300 disabled:opacity-50 transition"
+                    >
+                      {processing ? "Processing..." : "✓ Fix Eyes"}
+                    </button>
+
+                    <button
+                      onClick={() => processTool("retouchSkin")}
+                      disabled={processing}
+                      className="w-full py-2 px-4 bg-stone-200 text-charcoal-900 font-medium rounded hover:bg-stone-300 disabled:opacity-50 transition"
+                    >
+                      {processing ? "Processing..." : "✓ Retouch Skin"}
+                    </button>
+
+                    <button
+                      onClick={() => setActiveModal("maskBrush")}
+                      disabled={processing}
+                      className="w-full py-2 px-4 bg-stone-200 text-charcoal-900 font-medium rounded hover:bg-stone-300 disabled:opacity-50 transition"
+                    >
+                      ✓ Remove Object
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setPromptValue("")
+                        setActiveModal("relight")
+                      }}
+                      disabled={processing}
+                      className="w-full py-2 px-4 bg-stone-200 text-charcoal-900 font-medium rounded hover:bg-stone-300 disabled:opacity-50 transition"
+                    >
+                      ✓ Relight
+                    </button>
+
+                    <div className="border-t border-stone-300 pt-2 mt-2">
+                      <p className="text-xs font-semibold text-stone-600 mb-2">Background</p>
+                      <button
+                        onClick={() => processTool("blurBackground")}
+                        disabled={processing}
+                        className="w-full py-2 px-4 bg-stone-200 text-charcoal-900 font-medium rounded hover:bg-stone-300 disabled:opacity-50 transition text-sm"
+                      >
+                        {processing ? "Processing..." : "✓ Blur"}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setPromptValue("")
+                          setActiveModal("bgReplace")
+                        }}
+                        disabled={processing}
+                        className="w-full py-2 px-4 bg-stone-200 text-charcoal-900 font-medium rounded hover:bg-stone-300 disabled:opacity-50 transition text-sm mt-1"
+                      >
+                        ✓ Replace
+                      </button>
+
+                      <button
+                        onClick={() => processTool("removeBackground")}
+                        disabled={processing}
+                        className="w-full py-2 px-4 bg-stone-200 text-charcoal-900 font-medium rounded hover:bg-stone-300 disabled:opacity-50 transition text-sm mt-1"
+                      >
+                        {processing ? "Processing..." : "✓ Remove"}
+                      </button>
+                    </div>
+                  </>
                 )}
-                <p className="text-sm text-stone-600">○ Fix Eyes (Phase 5)</p>
-                <p className="text-sm text-stone-600">○ Retouch Skin (Phase 5)</p>
-                <p className="text-sm text-stone-600">○ Remove Object (Phase 5)</p>
               </div>
             </div>
 
-            {enhanceError && (
+            {processError && (
               <div className="bg-red-50 border border-red-200 p-4 rounded">
-                <p className="text-red-700 text-sm">{enhanceError}</p>
+                <p className="text-red-700 text-sm">{processError}</p>
               </div>
             )}
 
@@ -186,6 +262,104 @@ export default function EditorPage() {
             </div>
           </div>
         </div>
+
+        {/* Modals */}
+        {activeModal === "maskBrush" && image && (
+          <MaskBrush
+            imageBase64={image}
+            onMaskReady={(maskBlob) => {
+              setActiveModal(null)
+              processTool("removeObject", { mask: maskBlob })
+            }}
+            onCancel={() => setActiveModal(null)}
+          />
+        )}
+
+        {activeModal === "relight" && image && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h2 className="text-2xl font-bold mb-4">Relight Your Photo</h2>
+              <p className="text-stone-600 mb-4 text-sm">
+                Describe the lighting you want. Examples: &quot;golden hour&quot;, &quot;soft studio
+                light&quot;, &quot;bright daylight&quot;
+              </p>
+              <input
+                type="text"
+                value={promptValue}
+                onChange={(e) => setPromptValue(e.target.value)}
+                placeholder="E.g., golden hour, studio lighting..."
+                className="w-full border border-stone-300 rounded px-4 py-2 mb-4 focus:outline-none focus:border-gold-600"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setActiveModal(null)
+                    setPromptValue("")
+                  }}
+                  className="flex-1 py-2 bg-stone-300 text-charcoal-900 rounded font-medium hover:bg-stone-400 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (promptValue.trim()) {
+                      processTool("relight", { prompt: promptValue })
+                      setActiveModal(null)
+                      setPromptValue("")
+                    }
+                  }}
+                  className="flex-1 py-2 bg-gold-600 text-charcoal-900 rounded font-medium hover:bg-gold-700 transition disabled:opacity-50"
+                  disabled={!promptValue.trim()}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeModal === "bgReplace" && image && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h2 className="text-2xl font-bold mb-4">Replace Background</h2>
+              <p className="text-stone-600 mb-4 text-sm">
+                Describe the new background. Examples: &quot;beach at sunset&quot;, &quot;modern
+                office&quot;, &quot;forest green&quot;
+              </p>
+              <input
+                type="text"
+                value={promptValue}
+                onChange={(e) => setPromptValue(e.target.value)}
+                placeholder="E.g., beach at sunset, modern office..."
+                className="w-full border border-stone-300 rounded px-4 py-2 mb-4 focus:outline-none focus:border-gold-600"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setActiveModal(null)
+                    setPromptValue("")
+                  }}
+                  className="flex-1 py-2 bg-stone-300 text-charcoal-900 rounded font-medium hover:bg-stone-400 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (promptValue.trim()) {
+                      processTool("replaceBackground", { prompt: promptValue })
+                      setActiveModal(null)
+                      setPromptValue("")
+                    }
+                  }}
+                  className="flex-1 py-2 bg-gold-600 text-charcoal-900 rounded font-medium hover:bg-gold-700 transition disabled:opacity-50"
+                  disabled={!promptValue.trim()}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
