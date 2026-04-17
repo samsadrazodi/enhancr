@@ -11,7 +11,7 @@ export function getStripeClient(): Stripe {
     }
 
     stripeInstance = new Stripe(secretKey, {
-      apiVersion: "2023-10-16",
+      apiVersion: "2023-08-16",
     })
   }
 

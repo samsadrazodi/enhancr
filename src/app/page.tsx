@@ -7,7 +7,7 @@ export default function Home() {
           <span className="text-gold-600">faithfully</span>
         </h1>
         <p className="text-xl text-stone-500 text-center font-inter">
-          Restore what matters. Keep what's real.
+          Restore what matters. Keep what&apos;s real.
         </p>
       </div>
     </div>
