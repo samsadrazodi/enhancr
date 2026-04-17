@@ -24,7 +24,7 @@ interface ImageAnalysis {
 
 async function analyzeImage(imageBuffer: Buffer): Promise<ImageAnalysis> {
   const client = getGeminiClient()
-  const model = client.getGenerativeModel({ model: "gemini-2.0-flash" })
+  const model = client.getGenerativeModel({ model: "gemini-2.5-flash" })
 
   const base64Image = imageBuffer.toString("base64")
 
