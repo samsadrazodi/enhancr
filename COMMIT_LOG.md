@@ -29,3 +29,23 @@ be87b58 — fix(phase-1): ESLint, Stripe API version, build configuration
 - Added jsdom dev dependency
 - All verification checks pass ✓
 
+854f685 — docs(phase-1): update state tracking and phase notes
+- BUILD_STATE.md, COMMIT_LOG.md, PHASE_NOTES/phase-1.md
+
+## Phase 2 — Landing + Auth + Legal
+
+91a3767 — feat(phase-2): landing, auth, legal pages and components
+- Enhanced landing page: three pillars, features grid, drag-drop CTA (visual)
+- SessionProvider with useSession() hook (context-based)
+- Auth API routes: signup, login, signout, user, forgot-password
+- Auth pages: signup, login, forgot-password, reset-password
+- Navbar component (session-aware)
+- Footer component (disclaimer)
+- About page
+- Legal pages: terms, privacy, acceptable-use (DRAFT)
+- Protected /app/* pages: account, editor (with auth checks)
+- Error boundaries: error.tsx, not-found.tsx, global-error.tsx
+- Root layout: SessionProvider wraps Navbar, children, Footer
+- Updated middleware for /app/* protection
+- npm run lint ✓, npm run build ✓, npm run dev ✓
+

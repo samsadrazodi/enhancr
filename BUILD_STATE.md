@@ -1,11 +1,11 @@
 # Build State
 Last updated: 2026-04-16
-Last session summary: Phase 1 complete. Next.js 14.0.4 scaffold initialized with TypeScript strict mode, Tailwind v3, ESLint, Vitest. All verification checks pass: npm run lint ✓, npm run test ✓, npm run build ✓. Landing page renders with Darkroom Precision styling. Ready for Phase 2.
+Last session summary: Phase 2 complete. Enhanced landing page with three pillars, features grid, drag-drop CTA. Full auth system (signup/login/forgot-password/reset-password) with SessionProvider. Navbar and Footer components with session awareness. Legal pages (DRAFT). Protected /app/* routes. All routes render with Tailwind styling. npm run build ✓, npm run lint ✓. Ready for Phase 3.
 
 ## Current phase
-Phase: 1 — Repo scaffold
+Phase: 2 — Landing + auth + legal
 Status: complete
-Sub-step: Awaiting approval before proceeding to Phase 2
+Sub-step: Awaiting approval before proceeding to Phase 3
 
 ## Owner preferences
 - npm only (no pnpm, no yarn, no bun)
