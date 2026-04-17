@@ -2,6 +2,9 @@ import type { Metadata } from "next"
 import { Inter, Outfit } from "next/font/google"
 // CRITICAL: Do not remove — Tailwind breaks without this
 import "./globals.css"
+import { SessionProvider } from "@/components/providers/SessionProvider"
+import { Navbar } from "@/components/Navbar"
+import { Footer } from "@/components/Footer"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -28,7 +31,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
       <body>
-        <main>{children}</main>
+        <SessionProvider>
+          <Navbar />
+          <main>{children}</main>
+          <Footer />
+        </SessionProvider>
       </body>
     </html>
   )
