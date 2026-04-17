@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState, useRef } from "react"
 import { Upload } from "@/components/Upload"
 import { CanvasEditor } from "@/components/CanvasEditor"
-import { MaskBrush } from "@/components/editor/MaskBrush"
 
 interface ImageMetadata {
   width?: number
@@ -20,8 +19,6 @@ export default function EditorPage() {
   const [metadata, setMetadata] = useState<ImageMetadata | null>(null)
   const [processing, setProcessing] = useState(false)
   const [processError, setProcessError] = useState("")
-  const [activeModal, setActiveModal] = useState<"maskBrush" | "relight" | "bgReplace" | null>(null)
-  const [promptValue, setPromptValue] = useState("")
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -178,22 +175,19 @@ export default function EditorPage() {
                     </button>
 
                     <button
-                      onClick={() => setActiveModal("maskBrush")}
-                      disabled={processing}
-                      className="w-full py-2 px-4 bg-stone-200 text-charcoal-900 font-medium rounded hover:bg-stone-300 disabled:opacity-50 transition"
+                      disabled
+                      title="Requires image generation API"
+                      className="w-full py-2 px-4 bg-stone-100 text-stone-400 font-medium rounded opacity-50 transition text-sm cursor-not-allowed"
                     >
-                      ✓ Remove Object
+                      ○ Remove Object (coming soon)
                     </button>
 
                     <button
-                      onClick={() => {
-                        setPromptValue("")
-                        setActiveModal("relight")
-                      }}
-                      disabled={processing}
-                      className="w-full py-2 px-4 bg-stone-200 text-charcoal-900 font-medium rounded hover:bg-stone-300 disabled:opacity-50 transition"
+                      disabled
+                      title="Requires image generation API"
+                      className="w-full py-2 px-4 bg-stone-100 text-stone-400 font-medium rounded opacity-50 transition text-sm cursor-not-allowed"
                     >
-                      ✓ Relight
+                      ○ Relight (coming soon)
                     </button>
 
                     <div className="border-t border-stone-300 pt-2 mt-2">
@@ -207,22 +201,19 @@ export default function EditorPage() {
                       </button>
 
                       <button
-                        onClick={() => {
-                          setPromptValue("")
-                          setActiveModal("bgReplace")
-                        }}
-                        disabled={processing}
-                        className="w-full py-2 px-4 bg-stone-200 text-charcoal-900 font-medium rounded hover:bg-stone-300 disabled:opacity-50 transition text-sm mt-1"
+                        disabled
+                        title="Requires image generation API"
+                        className="w-full py-2 px-4 bg-stone-100 text-stone-400 font-medium rounded opacity-50 transition text-sm mt-1 cursor-not-allowed"
                       >
-                        ✓ Replace
+                        ○ Replace (coming soon)
                       </button>
 
                       <button
-                        onClick={() => processTool("removeBackground")}
-                        disabled={processing}
-                        className="w-full py-2 px-4 bg-stone-200 text-charcoal-900 font-medium rounded hover:bg-stone-300 disabled:opacity-50 transition text-sm mt-1"
+                        disabled
+                        title="Requires image generation API"
+                        className="w-full py-2 px-4 bg-stone-100 text-stone-400 font-medium rounded opacity-50 transition text-sm mt-1 cursor-not-allowed"
                       >
-                        {processing ? "Processing..." : "✓ Remove"}
+                        ○ Remove (coming soon)
                       </button>
                     </div>
                   </>
@@ -263,103 +254,7 @@ export default function EditorPage() {
           </div>
         </div>
 
-        {/* Modals */}
-        {activeModal === "maskBrush" && image && (
-          <MaskBrush
-            imageBase64={image}
-            onMaskReady={(maskBlob) => {
-              setActiveModal(null)
-              processTool("removeObject", { mask: maskBlob })
-            }}
-            onCancel={() => setActiveModal(null)}
-          />
-        )}
-
-        {activeModal === "relight" && image && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h2 className="text-2xl font-bold mb-4">Relight Your Photo</h2>
-              <p className="text-stone-600 mb-4 text-sm">
-                Describe the lighting you want. Examples: &quot;golden hour&quot;, &quot;soft studio
-                light&quot;, &quot;bright daylight&quot;
-              </p>
-              <input
-                type="text"
-                value={promptValue}
-                onChange={(e) => setPromptValue(e.target.value)}
-                placeholder="E.g., golden hour, studio lighting..."
-                className="w-full border border-stone-300 rounded px-4 py-2 mb-4 focus:outline-none focus:border-gold-600"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setActiveModal(null)
-                    setPromptValue("")
-                  }}
-                  className="flex-1 py-2 bg-stone-300 text-charcoal-900 rounded font-medium hover:bg-stone-400 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (promptValue.trim()) {
-                      processTool("relight", { prompt: promptValue })
-                      setActiveModal(null)
-                      setPromptValue("")
-                    }
-                  }}
-                  className="flex-1 py-2 bg-gold-600 text-charcoal-900 rounded font-medium hover:bg-gold-700 transition disabled:opacity-50"
-                  disabled={!promptValue.trim()}
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeModal === "bgReplace" && image && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h2 className="text-2xl font-bold mb-4">Replace Background</h2>
-              <p className="text-stone-600 mb-4 text-sm">
-                Describe the new background. Examples: &quot;beach at sunset&quot;, &quot;modern
-                office&quot;, &quot;forest green&quot;
-              </p>
-              <input
-                type="text"
-                value={promptValue}
-                onChange={(e) => setPromptValue(e.target.value)}
-                placeholder="E.g., beach at sunset, modern office..."
-                className="w-full border border-stone-300 rounded px-4 py-2 mb-4 focus:outline-none focus:border-gold-600"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setActiveModal(null)
-                    setPromptValue("")
-                  }}
-                  className="flex-1 py-2 bg-stone-300 text-charcoal-900 rounded font-medium hover:bg-stone-400 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (promptValue.trim()) {
-                      processTool("replaceBackground", { prompt: promptValue })
-                      setActiveModal(null)
-                      setPromptValue("")
-                    }
-                  }}
-                  className="flex-1 py-2 bg-gold-600 text-charcoal-900 rounded font-medium hover:bg-gold-700 transition disabled:opacity-50"
-                  disabled={!promptValue.trim()}
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Modal: no active modals in Phase 5A fallback mode */}
       </div>
     </div>
   )

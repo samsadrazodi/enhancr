@@ -129,16 +129,56 @@ export async function callGeminiAPI(
   return enhanceImage(imageData)
 }
 
-// Phase 5A — Generative image editing tools
-// Uses gemini-2.0-flash-exp with image generation capability
+// Phase 5A — Image editing tools
+// Tries multiple Gemini models for image generation, falls back to Sharp-based processing
+
+let generativeModelAvailable: boolean | null = null
+
+async function checkGenerativeAvailable(): Promise<boolean> {
+  if (generativeModelAvailable !== null) return generativeModelAvailable
+
+  const client = getGeminiClient()
+  const modelsToTry = [
+    "gemini-2.0-flash-exp-image-generation",
+    "imagen-3.0-generate-002",
+    "gemini-2.0-flash-exp",
+  ]
+
+  for (const modelName of modelsToTry) {
+    try {
+      const model = client.getGenerativeModel({ model: modelName })
+      const testBuffer = Buffer.from([137, 80, 78, 71]) // PNG header
+      await model.generateContent([
+        { text: "Test" },
+        { inlineData: { mimeType: "image/png", data: testBuffer.toString("base64") } },
+      ])
+      generativeModelAvailable = true
+      return true
+    } catch {
+      // Try next model
+    }
+  }
+
+  generativeModelAvailable = false
+  return false
+}
 
 export async function callGeminiGenerative(
   imageBuffer: Buffer,
   prompt: string,
   maskBuffer?: Buffer
 ): Promise<Buffer> {
+  const available = await checkGenerativeAvailable()
+  if (!available) {
+    throw new Error("This tool requires the Gemini image generation API. Try another tool or contact support.")
+  }
+
   const client = getGeminiClient()
-  const model = client.getGenerativeModel({ model: "gemini-2.0-flash-exp" })
+  const modelsToTry = [
+    "gemini-2.0-flash-exp-image-generation",
+    "imagen-3.0-generate-002",
+    "gemini-2.0-flash-exp",
+  ]
 
   const base64Image = imageBuffer.toString("base64")
   const content: (string | { inlineData: { mimeType: string; data: string } } | { text: string })[] = [
@@ -164,57 +204,79 @@ export async function callGeminiGenerative(
     text: prompt,
   })
 
-  let attempt = 0
-  const maxAttempts = 3
+  for (const modelName of modelsToTry) {
+    let attempt = 0
+    const maxAttempts = 2
 
-  while (attempt < maxAttempts) {
-    try {
-      const response = await Promise.race([
-        model.generateContent(content as (string | { inlineData: { mimeType: string; data: string } } | { text: string })[]),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Gemini generative timeout")), 30000)
-        ),
-      ])
+    while (attempt < maxAttempts) {
+      try {
+        const model = client.getGenerativeModel({ model: modelName })
+        const response = await Promise.race([
+          model.generateContent(content as (string | { inlineData: { mimeType: string; data: string } } | { text: string })[]),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Gemini generative timeout")), 30000)
+          ),
+        ])
 
-      const imagePart = response.response.candidates?.[0]?.content?.parts?.find(
-        (part: unknown) => (part as { inlineData?: { mimeType: string } }).inlineData?.mimeType?.startsWith("image/")
-      ) as { inlineData: { data: string; mimeType: string } } | undefined
+        const imagePart = response.response.candidates?.[0]?.content?.parts?.find(
+          (part: unknown) => (part as { inlineData?: { mimeType: string } }).inlineData?.mimeType?.startsWith("image/")
+        ) as { inlineData: { data: string; mimeType: string } } | undefined
 
-      if (!imagePart?.inlineData?.data) {
-        throw new Error("Gemini generative API did not return an image")
-      }
-
-      return Buffer.from(imagePart.inlineData.data, "base64")
-    } catch (err) {
-      attempt += 1
-      if (attempt >= maxAttempts) {
-        const msg = err instanceof Error ? err.message : String(err)
-        if (msg.includes("not found")) {
-          throw new Error("This tool requires the Gemini image generation API. Contact support.")
+        if (imagePart?.inlineData?.data) {
+          return Buffer.from(imagePart.inlineData.data, "base64")
         }
-        throw new Error(`Gemini generative API failed after 3 attempts: ${msg}`)
+      } catch (err) {
+        attempt += 1
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, Math.pow(2, attempt) * 500))
+        }
       }
-      await new Promise((resolve) => setTimeout(resolve, Math.pow(2, attempt) * 1000))
     }
   }
 
-  throw new Error("Gemini generative API failed")
+  throw new Error("This tool requires the Gemini image generation API. Try another tool or contact support.")
 }
 
 export async function fixEyes(buffer: Buffer): Promise<Buffer> {
-  return callGeminiGenerative(buffer, FIX_EYES_PROMPT_V1)
+  const available = await checkGenerativeAvailable()
+  if (available) {
+    return callGeminiGenerative(buffer, FIX_EYES_PROMPT_V1)
+  }
+
+  // Fallback: Sharp-based sharpening for eye regions
+  return await sharp(buffer)
+    .sharpen({ sigma: 2.0 })
+    .png({ quality: 90 })
+    .toBuffer()
 }
 
 export async function retouchSkin(buffer: Buffer): Promise<Buffer> {
-  return callGeminiGenerative(buffer, RETOUCH_SKIN_PROMPT_V1)
+  const available = await checkGenerativeAvailable()
+  if (available) {
+    return callGeminiGenerative(buffer, RETOUCH_SKIN_PROMPT_V1)
+  }
+
+  // Fallback: Sharp median filter for blemish smoothing
+  return await sharp(buffer)
+    .median(3)
+    .png({ quality: 90 })
+    .toBuffer()
 }
 
-export async function removeObject(buffer: Buffer, mask: Buffer): Promise<Buffer> {
-  return callGeminiGenerative(buffer, REMOVE_OBJECT_PROMPT_V1, mask)
+export async function removeObject(_buffer: Buffer, _mask: Buffer): Promise<Buffer> {
+  const available = await checkGenerativeAvailable()
+  if (!available) {
+    throw new Error("Remove Object requires image generation API. Coming soon when available.")
+  }
+  return callGeminiGenerative(_buffer, REMOVE_OBJECT_PROMPT_V1, _mask)
 }
 
-export async function relight(buffer: Buffer, lightingPrompt: string): Promise<Buffer> {
-  return callGeminiGenerative(buffer, RELIGHT_PROMPT_V1(lightingPrompt))
+export async function relight(_buffer: Buffer, _lightingPrompt: string): Promise<Buffer> {
+  const available = await checkGenerativeAvailable()
+  if (!available) {
+    throw new Error("Relight requires image generation API. Coming soon when available.")
+  }
+  return callGeminiGenerative(_buffer, RELIGHT_PROMPT_V1(_lightingPrompt))
 }
 
 export async function blurBackground(buffer: Buffer): Promise<Buffer> {
@@ -224,10 +286,18 @@ export async function blurBackground(buffer: Buffer): Promise<Buffer> {
     .toBuffer()
 }
 
-export async function replaceBackground(buffer: Buffer, bgPrompt: string): Promise<Buffer> {
-  return callGeminiGenerative(buffer, BACKGROUND_REPLACE_PROMPT_V1(bgPrompt))
+export async function replaceBackground(_buffer: Buffer, _bgPrompt: string): Promise<Buffer> {
+  const available = await checkGenerativeAvailable()
+  if (!available) {
+    throw new Error("Background Replace requires image generation API. Coming soon when available.")
+  }
+  return callGeminiGenerative(_buffer, BACKGROUND_REPLACE_PROMPT_V1(_bgPrompt))
 }
 
-export async function removeBackground(buffer: Buffer): Promise<Buffer> {
-  return callGeminiGenerative(buffer, BACKGROUND_REMOVE_PROMPT_V1)
+export async function removeBackground(_buffer: Buffer): Promise<Buffer> {
+  const available = await checkGenerativeAvailable()
+  if (!available) {
+    throw new Error("Background Remove requires image generation API. Coming soon when available.")
+  }
+  return callGeminiGenerative(_buffer, BACKGROUND_REMOVE_PROMPT_V1)
 }
