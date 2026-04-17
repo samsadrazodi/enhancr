@@ -1,11 +1,11 @@
 # Build State
 Last updated: 2026-04-16
-Last session summary: Phase 2 complete. Enhanced landing page with three pillars, features grid, drag-drop CTA. Full auth system (signup/login/forgot-password/reset-password) with SessionProvider. Navbar and Footer components with session awareness. Legal pages (DRAFT). Protected /app/* routes. All routes render with Tailwind styling. npm run build ✓, npm run lint ✓. Ready for Phase 3.
+Last session summary: Phase 2 LOCKED. All tests pass: signup ✓, login w/ persistence ✓, signout ✓, protected routes ✓, navbar updates ✓. Session management fixed (setSession on client after auth). Starting Phase 3 — Core editor shell: upload, Sharp processing, Supabase Storage, local crop tool.
 
 ## Current phase
-Phase: 2 — Landing + auth + legal
-Status: complete
-Sub-step: Awaiting approval before proceeding to Phase 3
+Phase: 3 — Core editor shell
+Status: in_progress
+Sub-step: Initialize editor route, upload component, Sharp server route
 
 ## Owner preferences
 - npm only (no pnpm, no yarn, no bun)

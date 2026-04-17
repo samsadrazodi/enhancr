@@ -49,3 +49,22 @@ be87b58 — fix(phase-1): ESLint, Stripe API version, build configuration
 - Updated middleware for /app/* protection
 - npm run lint ✓, npm run build ✓, npm run dev ✓
 
+d44adac — fix(auth): session persistence for login and signup
+- API routes now return session object
+- Login/signup pages call setSession() on client
+- SessionProvider detects auth change via onAuthStateChange
+- Session persists across page refresh
+
+187dac6 — fix(navbar): sign out button now clears session and redirects to home
+- Calls /api/auth/signout (server-side)
+- Calls supabase.auth.signOut() (client-side)
+- Redirects to / with router.push()
+
+**Phase 2 Status: LOCKED** ✓
+- All auth flows tested and working
+- Session persistence verified
+- Protected routes redirect when unauthenticated
+- Navbar/Footer respond to auth state changes
+
+## Phase 3 — Core Editor Shell (IN PROGRESS)
+
