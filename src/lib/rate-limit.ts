@@ -1,4 +1,5 @@
 const FREE_DAILY_LIMIT = 3
+const IS_DEV = process.env.NODE_ENV === "development"
 
 interface RateLimitEntry {
   count: number
@@ -15,6 +16,11 @@ export function checkRateLimit(
   remaining: number
   resetAt: number
 } {
+  // Skip rate limiting in development mode
+  if (IS_DEV) {
+    return { allowed: true, remaining: Infinity, resetAt: Date.now() + 24 * 60 * 60 * 1000 }
+  }
+
   const now = Date.now()
   const entry = store.get(userId)
 
